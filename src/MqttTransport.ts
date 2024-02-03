@@ -18,9 +18,9 @@ const defaults: Options = {
   debug: false,
   log: [],
   client: {
-    protocol: 'mqtts',
-    username: '',
-    password: '',
+    protocol: 'mqtt',
+    username: undefined,
+    password: undefined,
     host: '',
     port: 1883,
   },
