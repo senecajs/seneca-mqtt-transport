@@ -58,10 +58,11 @@ function MQTTTransport(this: any, options: Options) {
         let handler = seneca.export('gateway-lambda/handler')
 
         const msg = JSON.parse(message.toString())
-        const subTopic = topic
+        // TODO: CHECK TOPIC?
+        // const subTopic = topic
 
         return handler({
-          Records: [{ eventSource: 'mqtt', body: { msg, subTopic } }],
+          Records: [{ eventSource: 'mqtt', body: { msg } }],
         })
       })
     }
@@ -80,6 +81,7 @@ function MQTTTransport(this: any, options: Options) {
     seneca.act('sys:gateway,kind:lambda,add:hook,hook:handler', {
       handler: {
         name: 'mqtt',
+        // TODO: WHAT SHOULD BE MATCHED?
         match: (trigger: { record: any }) => {
           let matched = config.type === trigger.record.eventSource
           console.log('MQTT TYPE MATCHED', matched, trigger)
@@ -89,13 +91,13 @@ function MQTTTransport(this: any, options: Options) {
           this: typeof seneca,
           trigger: { record: any; event: any },
         ) {
-          const { msg, subTopic } = trigger.record.body
+          const { msg } = trigger.record.body
 
           const action = {
+            type: 'mqtt',
             role: 'transport',
-            cmd: 'sub',
-            topic: subTopic,
-            ...msg,
+            cmd: 'listen',
+            data: msg,
           }
 
           return gateway(action, { ...trigger, gateway$: { local: true } })
