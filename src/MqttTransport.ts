@@ -54,6 +54,7 @@ function MqttTransport(this: any, options: Options) {
     client.on('connect', function () {
       console.log('Connected to the broker')
       if (subTopic) {
+        //todo: allow subscription to multiple topics
         client.subscribe(subTopic, { qos }, (err) => {
           if (err) {
             console.error('Subscribe error: ', err)
@@ -64,7 +65,7 @@ function MqttTransport(this: any, options: Options) {
           let handler = seneca.export('gateway-lambda/handler')
 
           const msg = JSON.parse(message.toString())
-          // TODO: CHECK TOPIC?
+          // todo: Handle topic?
           // const subTopic = topic
 
           return handler({
@@ -92,7 +93,7 @@ function MqttTransport(this: any, options: Options) {
     seneca.act('sys:gateway,kind:lambda,add:hook,hook:handler', {
       handler: {
         name: 'mqtt',
-        // TODO: WHAT SHOULD BE MATCHED?
+        // todo: What should be matched?
         match: (trigger: { record: any }) => {
           let matched = config.type === trigger.record.eventSource
           console.log('MQTT TYPE MATCHED', matched, trigger)
