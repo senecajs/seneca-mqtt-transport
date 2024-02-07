@@ -1,12 +1,14 @@
 import { connect, IClientOptions, MqttClient } from 'mqtt'
 
+type QoS = 0 | 1 | 2
+
 type Options = {
   debug: boolean
   log: any[]
   client: IClientOptions
   subTopic: string
   pubTopic: string
-  qos?: 0 | 1 | 2
+  qos?: QoS
 }
 
 type Config = {
@@ -41,13 +43,18 @@ function MqttTransport(this: any, options: Options) {
 
   const subTopic = options.subTopic
   const pubTopic = options.pubTopic
+  let qos: QoS = 0
+  if (options.qos) {
+    qos = options.qos
+  }
+
   const client: MqttClient = connect(options.client)
 
   const clientReadyPromise = new Promise<void>((resolve, reject) => {
     client.on('connect', function () {
       console.log('Connected to the broker')
       if (subTopic) {
-        client.subscribe(subTopic, { qos: 0 }, (err) => {
+        client.subscribe(subTopic, { qos }, (err) => {
           if (err) {
             console.error('Subscribe error: ', err)
           }
@@ -123,7 +130,7 @@ function MqttTransport(this: any, options: Options) {
       let sent = null
       let err = null
 
-      client.publish(pubTopic, msgstr, (error: any) => {
+      client.publish(pubTopic, msgstr, { qos }, (error: any) => {
         if (error) {
           err = error
           console.log('MQTT SENT ERROR', error)
