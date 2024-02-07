@@ -9,7 +9,7 @@ const testHost = 'test.mosquitto.org'
 run()
 
 async function run() {
-  await Seneca({ legacy: false, timeout: 1111 })
+  const seneca = await Seneca({ legacy: false, timeout: 1111 })
     .test('print')
     .use('promisify')
     .use('gateway')
@@ -33,6 +33,9 @@ async function run() {
     })
     .listen({ type: 'mqtt' })
     .ready()
+
+  await seneca.mqttClientReady
+  await seneca.ready()
 
   // Simulating an external mqtt client
   const client = connect({
