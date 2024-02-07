@@ -19,7 +19,6 @@ async function run() {
       client: {
         host: testHost,
       },
-      // TODO: ALLOW SUB TO MULTIPLE TOPICS
       subTopic: testSubTopic,
     })
     .message('type:mqtt,role:transport,cmd:listen', async function (msg) {
