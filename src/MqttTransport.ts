@@ -136,15 +136,19 @@ function MqttTransport(this: any, options: Options) {
       let sent = null
       let err = null
 
-      client.publish(pubTopic, msgstr, { qos }, (error: any) => {
-        if (error) {
-          err = error
-          console.log('MQTT SENT ERROR', error)
-        }
+      if (pubTopic && msgstr) {
+        client.publish(pubTopic, msgstr, { qos }, (error: any) => {
+          if (error) {
+            err = error
+            console.error('MQTT SENT ERROR', error)
+          }
 
-        ok = true
-        sent = true
-      })
+          ok = true
+          sent = true
+        })
+      } else {
+        err = 'missing-pubTopic-or-msgstr'
+      }
 
       reply({ ok, sent, msgstr, err })
     }
