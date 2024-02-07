@@ -32,7 +32,12 @@ async function run() {
     .client({ type: 'mqtt' })
     .ready()
 
-  await seneca.mqttClientReady
+  try {
+    await seneca.mqttClientReady
+  } catch (err) {
+    console.error('MQTT client connection error: ', err)
+  }
+
   await seneca.ready()
 
   let o1 = await seneca.post('type:mqtt', {

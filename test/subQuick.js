@@ -33,7 +33,12 @@ async function run() {
     .listen({ type: 'mqtt' })
     .ready()
 
-  await seneca.mqttClientReady
+  try {
+    await seneca.mqttClientReady
+  } catch (err) {
+    console.error('MQTT client connection error: ', err)
+  }
+
   await seneca.ready()
 
   // Simulating an external mqtt client
