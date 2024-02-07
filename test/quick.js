@@ -21,13 +21,16 @@ async function run() {
       },
       subTopic: testSubTopic,
     })
-    .message('role:transport,cmd:sub,topic:test/quick', async function (msg) {
-      if (msg && msg.x && msg.y) {
-        return { result: msg.x + msg.y }
-      } else {
-        return { error: 'Missing or invalid message data' }
-      }
-    })
+    .message(
+      `role:transport,cmd:sub,topic:${testSubTopic}`,
+      async function (msg) {
+        if (msg && msg.x && msg.y) {
+          return { result: msg.x + msg.y }
+        } else {
+          return { error: 'Missing or invalid message data' }
+        }
+      },
+    )
     .listen({ type: 'mqtt' })
     .ready()
 
