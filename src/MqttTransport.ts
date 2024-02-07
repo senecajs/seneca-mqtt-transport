@@ -74,6 +74,11 @@ function MqttTransport(this: any, options: Options) {
       }
       resolve()
     })
+
+    client.on('error', (err) => {
+      console.error('Connection error: ', err)
+      reject(err)
+    })
   })
 
   seneca.decorate('mqttClientReady', clientReadyPromise)
