@@ -19,18 +19,18 @@ async function run() {
       client: {
         host: testHost,
       },
+      // TODO: ALLOW SUB TO MULTIPLE TOPICS
       subTopic: testSubTopic,
     })
-    .message(
-      `role:transport,cmd:sub,topic:${testSubTopic}`,
-      async function (msg) {
-        if (msg && msg.x && msg.y) {
-          return { result: msg.x + msg.y }
-        } else {
-          return { error: 'Missing or invalid message data' }
-        }
-      },
-    )
+    .message('type:mqtt,role:transport,cmd:listen', async function (msg) {
+      const { data } = msg
+      if (data?.x && data?.y) {
+        const { x, y } = data
+        return { result: x + y }
+      } else {
+        return { error: 'Missing or invalid message data' }
+      }
+    })
     .listen({ type: 'mqtt' })
     .ready()
 
