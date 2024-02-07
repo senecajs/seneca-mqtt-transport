@@ -13,7 +13,7 @@ type Config = {
   type: string
 }
 
-// export type MQTTTransportOptions = Partial<Options>
+export type MqttTransportOptions = Partial<Options>
 
 const defaults: Options = {
   debug: false,
@@ -30,50 +30,49 @@ const defaults: Options = {
   qos: 0,
 }
 
-function MQTTTransport(this: any, options: Options) {
+function MqttTransport(this: any, options: Options) {
   const seneca: any = this
 
   const tag = seneca.plugin.tag
   const gtag = null == tag || '-' === tag ? '' : '$' + tag
   const gateway = seneca.export('gateway' + gtag + '/handler')
 
-  // const log = options.debug && (options.log || [])
-  // const tu = seneca.export('transport/utils')
+  const log = options.debug && (options.log || [])
 
   const subTopic = options.subTopic
-  // const pubTopic = options.pubTopic
+  const pubTopic = options.pubTopic
   const client: MqttClient = connect(options.client)
 
-  client.on('connect', function () {
-    console.log('Connected to the broker')
-
-    if (subTopic) {
-      client.subscribe(subTopic, { qos: 0 }, (err) => {
-        if (err) {
-          console.error('Subscribe error: ', err)
-        }
-      })
-
-      client.on('message', (topic, message) => {
-        let handler = seneca.export('gateway-lambda/handler')
-
-        const msg = JSON.parse(message.toString())
-        // TODO: CHECK TOPIC?
-        // const subTopic = topic
-
-        return handler({
-          Records: [{ eventSource: 'mqtt', body: { msg } }],
+  const clientReadyPromise = new Promise<void>((resolve, reject) => {
+    client.on('connect', function () {
+      console.log('Connected to the broker')
+      if (subTopic) {
+        client.subscribe(subTopic, { qos: 0 }, (err) => {
+          if (err) {
+            console.error('Subscribe error: ', err)
+          }
         })
-      })
-    }
+
+        client.on('message', (topic, message) => {
+          let handler = seneca.export('gateway-lambda/handler')
+
+          const msg = JSON.parse(message.toString())
+          // TODO: CHECK TOPIC?
+          // const subTopic = topic
+
+          return handler({
+            Records: [{ eventSource: 'mqtt', body: { msg } }],
+          })
+        })
+      }
+      resolve()
+    })
   })
 
-  client.on('error', function (err: any) {
-    console.error('Connection error: ', err)
-  })
+  seneca.decorate('mqttClientReady', clientReadyPromise)
 
   seneca.add('role:transport,hook:listen,type:mqtt', hook_listen_mqtt)
-  // seneca.add('role:transport,hook:client,type:mqtt', hook_client_mqtt)
+  seneca.add('role:transport,hook:client,type:mqtt', hook_client_mqtt)
 
   function hook_listen_mqtt(this: any, config: Config, ready: Function) {
     const seneca = this.root.delegate()
@@ -108,51 +107,48 @@ function MQTTTransport(this: any, options: Options) {
     return ready(config)
   }
 
-  // async function hook_client_mqtt(this: any, config: Config, ready: Function) {
-  //   const pubTopic = config.pubTopic
-  //   const qos = config.qos || 0
-  //
-  //   async function send_msg(msg: any, reply: any, meta: any) {
-  //     const msgstr = JSON.stringify(tu.externalize_msg(seneca, msg, meta))
-  //     log &&
-  //       log.push({
-  //         hook: 'client',
-  //         entry: 'send',
-  //         pat: meta.pattern,
-  //         w: Date.now(),
-  //         m: meta.id,
-  //       })
-  //
-  //     let ok = false
-  //     let sent = null
-  //     let err = null
-  //
-  //     client.publish(pubTopic, msgstr, { qos }, (e: any) => {
-  //       if (e) {
-  //         err = e
-  //         console.log('MQTT SENT ERROR', e)
-  //       }
-  //
-  //       ok = true
-  //       sent = true
-  //     })
-  //
-  //     reply({ ok, sent, msgstr, err })
-  //   }
-  //
-  //   return ready({
-  //     config: config,
-  //     send: send_msg,
-  //   })
-  // }
+  async function hook_client_mqtt(this: any, config: Config, ready: Function) {
+    async function send_msg(msg: any, reply: any, meta: any) {
+      const msgstr = JSON.stringify(msg.data)
+      log &&
+        log.push({
+          hook: 'client',
+          entry: 'send',
+          pat: meta.pattern,
+          w: Date.now(),
+          m: meta.id,
+        })
+
+      let ok = false
+      let sent = null
+      let err = null
+
+      client.publish(pubTopic, msgstr, (error: any) => {
+        if (error) {
+          err = error
+          console.log('MQTT SENT ERROR', error)
+        }
+
+        ok = true
+        sent = true
+      })
+
+      reply({ ok, sent, msgstr, err })
+    }
+
+    return ready({
+      config: config,
+      send: send_msg,
+    })
+  }
 
   return {
     exports: {},
   }
 }
 
-Object.assign(MQTTTransport, { defaults })
-export default MQTTTransport
+Object.assign(MqttTransport, { defaults })
+export default MqttTransport
 if ('undefined' !== typeof module) {
-  module.exports = MQTTTransport
+  module.exports = MqttTransport
 }
