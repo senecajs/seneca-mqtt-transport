@@ -1,6 +1,6 @@
 {
   "name": "@seneca/mqtt-transport",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "main": "dist/MqttTransport.js",
   "type": "commonjs",
   "types": "dist/MqttTransport.d.ts",
