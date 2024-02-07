@@ -10,10 +10,7 @@ type Options = {
 }
 
 type Config = {
-  subTopic: string
-  pubTopic: string
-  qos?: 0 | 1 | 2
-  msg: object
+  type: string
 }
 
 // export type MQTTTransportOptions = Partial<Options>
@@ -58,9 +55,13 @@ function MQTTTransport(this: any, options: Options) {
       })
 
       client.on('message', (topic, message) => {
-        seneca.act('role:transport,hook:listen,type:mqtt', {
-          msg: JSON.parse(message.toString()),
-          subTopic: topic,
+        let handler = seneca.export('gateway-lambda/handler')
+
+        const msg = JSON.parse(message.toString())
+        const subTopic = topic
+
+        return handler({
+          Records: [{ eventSource: 'mqtt', body: { msg, subTopic } }],
         })
       })
     }
@@ -74,22 +75,35 @@ function MQTTTransport(this: any, options: Options) {
   // seneca.add('role:transport,hook:client,type:mqtt', hook_client_mqtt)
 
   function hook_listen_mqtt(this: any, config: Config, ready: Function) {
-    const msg = config.msg
-    const subTopic = config.subTopic
-    const action = {
-      role: 'transport',
-      cmd: 'subscribed',
-      topic: subTopic,
-      ...msg,
-    }
+    const seneca = this.root.delegate()
 
-    return gateway(action, { local: true })
-      .then(function (out: any) {
-        ready(null, out)
-      })
-      .catch(function (err: any) {
-        ready({ error: err })
-      })
+    seneca.act('sys:gateway,kind:lambda,add:hook,hook:handler', {
+      handler: {
+        name: 'mqtt',
+        match: (trigger: { record: any }) => {
+          let matched = config.type === trigger.record.eventSource
+          console.log('MQTT TYPE MATCHED', matched, trigger)
+          return matched
+        },
+        process: async function (
+          this: typeof seneca,
+          trigger: { record: any; event: any },
+        ) {
+          const { msg, subTopic } = trigger.record.body
+
+          const action = {
+            role: 'transport',
+            cmd: 'sub',
+            topic: subTopic,
+            ...msg,
+          }
+
+          return gateway(action, { ...trigger, gateway$: { local: true } })
+        },
+      },
+    })
+
+    return ready(config)
   }
 
   // async function hook_client_mqtt(this: any, config: Config, ready: Function) {
