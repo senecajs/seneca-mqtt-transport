@@ -1,6 +1,6 @@
 {
   "name": "@seneca/mqtt-transport",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "main": "dist/MqttTransport.js",
   "type": "commonjs",
   "types": "dist/MqttTransport.d.ts",
@@ -52,10 +52,13 @@
     "typescript": "^5.3.3"
   },
   "peerDependencies": {
+    "@seneca/gateway": ">=1.1",
+    "@seneca/gateway-lambda": ">=1.0",
     "seneca": ">=3",
     "seneca-entity": ">=25",
-    "seneca-promisify": ">=3",
-    "@seneca/gateway-lambda": ">=1.0",
-    "@seneca/gateway": ">=1.1"
+    "seneca-promisify": ">=3"
+  },
+  "dependencies": {
+    "mqtt": "^5.3.5"
   }
 }
