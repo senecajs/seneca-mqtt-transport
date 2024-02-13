@@ -13,6 +13,9 @@
     "mqtt-transport"
   ],
   "author": "Richard Rodger - richardrodger.com",
+  "contributors": [
+     "Leonardo Cunha https://github.com/lmscunha"
+  ],
   "repository": {
     "type": "git",
     "url": "git://github.com/senecajs/seneca-mqtt-transport.git"
