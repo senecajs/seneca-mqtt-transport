@@ -29,13 +29,20 @@ async function run() {
           external: true,
           msg: 'type:mqtt,role:transport,cmd:sub',
         },
+        'test/quick/log': {
+          qos: 0,
+          external: false,
+          msg: 'type:mqtt,role:transport,cmd:log',
+        },
       },
     })
     .message('type:mqtt,role:transport,cmd:sum', async function (msg) {
       const { json } = msg
       if (json?.x && json?.y) {
         const { x, y } = json
-        return { result: x + y }
+        const result = { result: x + y }
+        console.log('Sum result ', result)
+        return result
       } else {
         return { error: 'Missing or invalid message data' }
       }
@@ -44,7 +51,9 @@ async function run() {
       const { json } = msg
       if (json?.x && json?.y) {
         const { x, y } = json
-        return { result: x - y }
+        const result = { result: x - y }
+        console.log('Sub result ', result)
+        return result
       } else {
         return { error: 'Missing or invalid message data' }
       }
@@ -61,7 +70,7 @@ async function run() {
 
   await seneca.ready()
 
-  // Simulating an external mqtt client
+  // Simulating an external mqtt client, which seneca receives and process the data
   const client = connect({
     host: testHost,
     protocol: 'mqtt',
@@ -95,4 +104,14 @@ async function run() {
   client.on('error', function (err) {
     console.error('Connection error: ', err)
   })
+
+  // Simulating an internal seneca msg that should send data to the broker
+  let o1 = await seneca.post('type:mqtt,role:transport,cmd:log', {
+    topic: 'test/quick/log',
+    json: {
+      x: 1,
+      y: 6,
+    },
+  })
+  console.log('OUT', o1)
 }
