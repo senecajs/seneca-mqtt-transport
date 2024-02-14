@@ -2,7 +2,6 @@ const Seneca = require('seneca')
 const MqttTransport = require('../dist/MqttTransport')
 const { connect } = require('mqtt')
 
-const testSubTopic = 'test/quick'
 //Public host - don't send sensitive data
 const testHost = 'test.mosquitto.org'
 
@@ -19,17 +18,38 @@ async function run() {
       client: {
         host: testHost,
       },
-      subTopic: testSubTopic,
+      topic: {
+        'test/quick/sum': {
+          qos: 0,
+          external: true,
+          msg: 'type:mqtt,role:transport,cmd:sum',
+        },
+        'test/quick/sub': {
+          qos: 0,
+          external: true,
+          msg: 'type:mqtt,role:transport,cmd:sub',
+        },
+      },
     })
-    .message('type:mqtt,role:transport,cmd:listen', async function (msg) {
-      const { data } = msg
-      if (data?.x && data?.y) {
-        const { x, y } = data
+    .message('type:mqtt,role:transport,cmd:sum', async function (msg) {
+      const { json } = msg
+      if (json?.x && json?.y) {
+        const { x, y } = json
         return { result: x + y }
       } else {
         return { error: 'Missing or invalid message data' }
       }
     })
+    .message('type:mqtt,role:transport,cmd:sub', async function (msg) {
+      const { json } = msg
+      if (json?.x && json?.y) {
+        const { x, y } = json
+        return { result: x - y }
+      } else {
+        return { error: 'Missing or invalid message data' }
+      }
+    })
+
     .listen({ type: 'mqtt' })
     .ready()
 
@@ -50,17 +70,25 @@ async function run() {
 
   client.on('connect', function () {
     console.log('External Connected to the broker')
-    const messageAction = { x: 5, y: 2 }
-    const messageStr = JSON.stringify(messageAction)
+    const ext1 = {
+      msgStr: JSON.stringify({ x: 5, y: 2 }),
+      topic: 'test/quick/sum',
+    }
 
-    client.publish(testSubTopic, messageStr, (err) => {
-      if (err) {
-        console.error(err)
-      }
-      console.log(
-        'External Client Published message to the MQTT broker',
-        messageStr,
-      )
+    const ext2 = {
+      msgStr: JSON.stringify({ x: 20, y: 6 }),
+      topic: 'test/quick/sub',
+    }
+
+    const messages = [ext1, ext2]
+
+    messages.forEach((msgObj) => {
+      client.publish(msgObj.topic, msgObj.msgStr, (err) => {
+        if (err) {
+          console.error(err)
+        }
+        console.log('External Client Published message: ', msgObj.msgStr)
+      })
     })
   })
 
