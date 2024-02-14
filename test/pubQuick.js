@@ -1,7 +1,6 @@
 const Seneca = require('seneca')
 const MqttTransport = require('../dist/MqttTransport')
 
-const testSubTopic = 'test/quick'
 //Public host - don't send sensitive data
 const testHost = 'test.mosquitto.org'
 
@@ -18,16 +17,13 @@ async function run() {
       client: {
         host: testHost,
       },
-      pubTopic: testSubTopic,
-    })
-    .message('type:mqtt,role:transport,cmd:listen', async function (msg) {
-      const { data } = msg
-      if (data?.x && data?.y) {
-        const { x, y } = data
-        return { result: x + y }
-      } else {
-        return { error: 'Missing or invalid message data' }
-      }
+      topic: {
+        'test/quick': {
+          qos: 0,
+          external: false,
+          msg: 'type:mqtt,role:transport,cmd:log',
+        },
+      },
     })
     .client({ type: 'mqtt' })
     .ready()
@@ -40,8 +36,9 @@ async function run() {
 
   await seneca.ready()
 
-  let o1 = await seneca.post('type:mqtt', {
-    data: {
+  let o1 = await seneca.post('type:mqtt,role:transport,cmd:log', {
+    topic: 'test/quick',
+    json: {
       x: 1,
       y: 6,
     },
