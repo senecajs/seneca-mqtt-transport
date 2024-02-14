@@ -139,11 +139,12 @@ function MqttTransport(this: any, options: Options) {
           w: Date.now(),
           m: meta.id,
         })
-      // todo: use options.topic
+
       const { ok, err, sent } = await handleInternalMsg({
         topic: msg.topic,
         json: msg.json,
       })
+
       reply({ ok, sent, msgstr, err })
     }
 
@@ -172,13 +173,15 @@ function MqttTransport(this: any, options: Options) {
 
     const topicObj = nonExternalTopics[msg.topic]
 
-    // todo: add externalise utility function
     try {
       if (!topicObj) {
         err = 'topic-not-declared'
       } else {
         const jsonStr = JSON.stringify(msg.json)
-        await client.publishAsync(msg.topic, jsonStr, { qos: topicObj.qos })
+        const qos: QoS = topicObj.qos || 0
+
+        await client.publishAsync(msg.topic, jsonStr, { qos })
+
         ok = true
         sent = true
       }
