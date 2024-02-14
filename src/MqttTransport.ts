@@ -44,37 +44,43 @@ function MqttTransport(this: any, options: Options) {
   const log = options.debug && (options.log || [])
   const tu = seneca.export('transport/utils')
 
-  const topics = options.topic
-
   const client: MqttClient = connect(options.client)
+
+  const topics = options.topic
+  const externalTopics: { [key: string]: TopicConfig } = {}
+  const nonExternalTopics: { [key: string]: TopicConfig } = {}
 
   const clientReadyPromise = new Promise<void>((resolve, reject) => {
     client.on('connect', function () {
       console.log('Connected to the broker')
 
       if (topics) {
-        for (let optTopic in topics) {
-          const topicObj = topics[optTopic]
-          const qos: QoS = topicObj.qos || 0
+        for (let topic in topics) {
+          const topicObj = topics[topic]
 
-          client.subscribe(optTopic, { qos }, (err) => {
-            if (err) {
-              console.error('Subscribe error: ', err)
-            }
-          })
+          if (topicObj.external) {
+            const qos: QoS = topicObj.qos || 0
 
-          client.on('message', (topic, message) => {
-            const isSameTopic = topic === optTopic
-            const optMsg = topicObj.msg
-            const isExternal = topicObj.external
+            client.subscribe(topic, { qos }, (err) => {
+              if (err) {
+                console.error('Subscribe error: ', err)
+              }
+            })
 
-            const isHandleable = isSameTopic && optMsg && isExternal
-
-            if (isHandleable) {
-              return handleExternalMsg(topic, message, optMsg)
-            }
-          })
+            externalTopics[topic] = topicObj
+          } else {
+            seneca.message(topicObj.msg, handleInternalMsg)
+            nonExternalTopics[topic] = topicObj
+          }
         }
+
+        client.on('message', (topic, extMsg) => {
+          const topicObj = externalTopics[topic]
+
+          if (topicObj && topicObj.msg) {
+            handleExternalMsg(topic, extMsg, topicObj.msg)
+          }
+        })
       }
       resolve()
     })
@@ -134,7 +140,10 @@ function MqttTransport(this: any, options: Options) {
           m: meta.id,
         })
       // todo: use options.topic
-      const { ok, err, sent } = await handleInternalMsg('', msgstr)
+      const { ok, err, sent } = await handleInternalMsg({
+        topic: msg.topic,
+        json: msg.json,
+      })
       reply({ ok, sent, msgstr, err })
     }
 
@@ -156,24 +165,33 @@ function MqttTransport(this: any, options: Options) {
   }
 
   //Handles sending MSG to the broker
-  async function handleInternalMsg(topic: string, msg: any) {
+  async function handleInternalMsg(msg: any) {
     let ok = false
     let err = null
     let sent = null
 
+    const topicObj = nonExternalTopics[msg.topic]
+
     // todo: add externalise utility function
     try {
-      await client.publishAsync(topic, msg)
-      ok = true
-      sent = true
-    } catch (err) {
-      console.error('Error Sending External MSG: ', err)
+      if (!topicObj) {
+        err = 'topic-not-declared'
+      } else {
+        const jsonStr = JSON.stringify(msg.json)
+        await client.publishAsync(msg.topic, jsonStr, { qos: topicObj.qos })
+        ok = true
+        sent = true
+      }
+    } catch (error) {
+      console.error('Error Sending External MSG: ', error)
+      err = error
     }
 
     return {
       ok,
       err,
       sent,
+      json: msg.json,
     }
   }
 
