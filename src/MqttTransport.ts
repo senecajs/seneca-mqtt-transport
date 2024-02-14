@@ -2,13 +2,17 @@ import { connect, IClientOptions, MqttClient } from 'mqtt'
 
 type QoS = 0 | 1 | 2
 
+type TopicConfig = {
+  external: boolean
+  msg: string
+  qos?: QoS
+}
+
 type Options = {
   debug: boolean
   log: any[]
   client: IClientOptions
-  subTopic: string
-  pubTopic: string
-  qos?: QoS
+  topic: Record<string, TopicConfig>
 }
 
 type Config = {
@@ -27,9 +31,7 @@ const defaults: Options = {
     host: '',
     port: 1883,
   },
-  subTopic: '',
-  pubTopic: '',
-  qos: 0,
+  topic: {},
 }
 
 function MqttTransport(this: any, options: Options) {
@@ -40,38 +42,39 @@ function MqttTransport(this: any, options: Options) {
   const gateway = seneca.export('gateway' + gtag + '/handler')
 
   const log = options.debug && (options.log || [])
+  const tu = seneca.export('transport/utils')
 
-  const subTopic = options.subTopic
-  const pubTopic = options.pubTopic
-  let qos: QoS = 0
-  if (options.qos) {
-    qos = options.qos
-  }
+  const topics = options.topic
 
   const client: MqttClient = connect(options.client)
 
   const clientReadyPromise = new Promise<void>((resolve, reject) => {
     client.on('connect', function () {
       console.log('Connected to the broker')
-      if (subTopic) {
-        //todo: allow subscription to multiple topics
-        client.subscribe(subTopic, { qos }, (err) => {
-          if (err) {
-            console.error('Subscribe error: ', err)
-          }
-        })
 
-        client.on('message', (topic, message) => {
-          let handler = seneca.export('gateway-lambda/handler')
+      if (topics) {
+        for (let optTopic in topics) {
+          const topicObj = topics[optTopic]
+          const qos: QoS = topicObj.qos || 0
 
-          const msg = JSON.parse(message.toString())
-          // todo: Handle topic?
-          // const subTopic = topic
-
-          return handler({
-            Records: [{ eventSource: 'mqtt', body: { msg } }],
+          client.subscribe(optTopic, { qos }, (err) => {
+            if (err) {
+              console.error('Subscribe error: ', err)
+            }
           })
-        })
+
+          client.on('message', (topic, message) => {
+            const isSameTopic = topic === optTopic
+            const optMsg = topicObj.msg
+            const isExternal = topicObj.external
+
+            const isHandleable = isSameTopic && optMsg && isExternal
+
+            if (isHandleable) {
+              return handleExternalMsg(topic, message, optMsg)
+            }
+          })
+        }
       }
       resolve()
     })
@@ -93,7 +96,6 @@ function MqttTransport(this: any, options: Options) {
     seneca.act('sys:gateway,kind:lambda,add:hook,hook:handler', {
       handler: {
         name: 'mqtt',
-        // todo: What should be matched?
         match: (trigger: { record: any }) => {
           let matched = config.type === trigger.record.eventSource
           console.log('MQTT TYPE MATCHED', matched, trigger)
@@ -131,25 +133,8 @@ function MqttTransport(this: any, options: Options) {
           w: Date.now(),
           m: meta.id,
         })
-
-      let ok = false
-      let sent = null
-      let err = null
-
-      if (pubTopic && msgstr) {
-        client.publish(pubTopic, msgstr, { qos }, (error: any) => {
-          if (error) {
-            err = error
-            console.error('MQTT SENT ERROR', error)
-          }
-
-          ok = true
-          sent = true
-        })
-      } else {
-        err = 'missing-pubTopic-or-msgstr'
-      }
-
+      // todo: use options.topic
+      const { ok, err, sent } = await handleInternalMsg('', msgstr)
       reply({ ok, sent, msgstr, err })
     }
 
@@ -157,6 +142,39 @@ function MqttTransport(this: any, options: Options) {
       config: config,
       send: send_msg,
     })
+  }
+
+  //Handles MSG received from the broker
+  async function handleExternalMsg(
+    topic: string,
+    msg: Buffer,
+    act: string | object,
+  ) {
+    const externalJson = JSON.parse(msg.toString())
+    const interMsg = tu.internalize_msg(seneca, { json: externalJson, topic })
+    seneca.post(act, interMsg)
+  }
+
+  //Handles sending MSG to the broker
+  async function handleInternalMsg(topic: string, msg: any) {
+    let ok = false
+    let err = null
+    let sent = null
+
+    // todo: add externalise utility function
+    try {
+      await client.publishAsync(topic, msg)
+      ok = true
+      sent = true
+    } catch (err) {
+      console.error('Error Sending External MSG: ', err)
+    }
+
+    return {
+      ok,
+      err,
+      sent,
+    }
   }
 
   return {
