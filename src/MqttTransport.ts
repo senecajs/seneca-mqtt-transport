@@ -48,7 +48,7 @@ function MqttTransport(this: any, options: Options) {
 
   const topics = options.topic
   const externalTopics: { [key: string]: TopicConfig } = {}
-  const nonExternalTopics: { [key: string]: TopicConfig } = {}
+  const internalTopics: { [key: string]: TopicConfig } = {}
 
   const clientReadyPromise = new Promise<void>((resolve, reject) => {
     client.on('connect', function () {
@@ -56,10 +56,10 @@ function MqttTransport(this: any, options: Options) {
 
       if (topics) {
         for (let topic in topics) {
-          const topicObj = topics[topic]
+          const topicConfig = topics[topic]
 
-          if (topicObj.external) {
-            const qos: QoS = topicObj.qos || 0
+          if (topicConfig.external) {
+            const qos: QoS = topicConfig.qos || 0
 
             client.subscribe(topic, { qos }, (err) => {
               if (err) {
@@ -67,18 +67,18 @@ function MqttTransport(this: any, options: Options) {
               }
             })
 
-            externalTopics[topic] = topicObj
+            externalTopics[topic] = topicConfig
           } else {
-            seneca.message(topicObj.msg, handleInternalMsg)
-            nonExternalTopics[topic] = topicObj
+            seneca.message(topicConfig.msg, handleInternalMsg)
+            internalTopics[topic] = topicConfig
           }
         }
 
         client.on('message', (topic, extMsg) => {
-          const topicObj = externalTopics[topic]
+          const topicConfig = externalTopics[topic]
 
-          if (topicObj && topicObj.msg) {
-            handleExternalMsg(topic, extMsg, topicObj.msg)
+          if (topicConfig && topicConfig.msg) {
+            handleExternalMsg(topic, extMsg, topicConfig.msg)
           }
         })
       }
@@ -171,14 +171,14 @@ function MqttTransport(this: any, options: Options) {
     let err = null
     let sent = null
 
-    const topicObj = nonExternalTopics[msg.topic]
+    const topicConfig = internalTopics[msg.topic]
 
     try {
-      if (!topicObj) {
+      if (!topicConfig) {
         err = 'topic-not-declared'
       } else {
         const jsonStr = JSON.stringify(msg.json)
-        const qos: QoS = topicObj.qos || 0
+        const qos: QoS = topicConfig.qos || 0
 
         await client.publishAsync(msg.topic, jsonStr, { qos })
 
