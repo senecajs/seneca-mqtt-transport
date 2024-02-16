@@ -74,11 +74,11 @@ function MqttTransport(this: any, options: Options) {
           }
         }
 
-        client.on('message', (topic, extMsg) => {
+        client.on('message', (topic, externalMsg) => {
           const topicConfig = externalTopics[topic]
 
           if (topicConfig && topicConfig.msg) {
-            handleExternalMsg(topic, extMsg, topicConfig.msg)
+            handleExternalMsg(topic, externalMsg, topicConfig.msg)
           }
         })
       }
@@ -154,12 +154,16 @@ function MqttTransport(this: any, options: Options) {
   //Handles MSG received from the broker
   async function handleExternalMsg(
     topic: string,
-    msg: Buffer,
+    externalBuffer: Buffer,
     act: string | object,
   ) {
-    const externalJson = JSON.parse(msg.toString())
-    const interMsg = tu.internalize_msg(seneca, { json: externalJson, topic })
-    return seneca.post(act, interMsg)
+    const externalJson = JSON.parse(externalBuffer.toString())
+    const internalMsg = tu.internalize_msg(seneca, {
+      json: externalJson,
+      topic,
+    })
+
+    return seneca.post(act, internalMsg)
   }
 
   //Handles sending MSG to the broker
