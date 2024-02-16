@@ -111,14 +111,12 @@ function MqttTransport(this: any, options: Options) {
           this: typeof seneca,
           trigger: { record: any; event: any },
         ) {
-          const { msg } = trigger.record.body
-
-          const action = {
-            type: 'mqtt',
-            role: 'transport',
-            cmd: 'listen',
-            data: msg,
-          }
+          const { topic, msg } = trigger.record.body
+          const externalJson = JSON.parse(msg.toString())
+          const action = tu.internalize_msg(seneca, {
+            json: externalJson,
+            topic,
+          })
 
           return gateway(action, { ...trigger, gateway$: { local: true } })
         },
