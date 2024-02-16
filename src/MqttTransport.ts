@@ -130,7 +130,6 @@ function MqttTransport(this: any, options: Options) {
 
   async function hook_client_mqtt(this: any, config: Config, ready: Function) {
     async function send_msg(msg: any, reply: any, meta: any) {
-      const msgstr = JSON.stringify(msg.data)
       log &&
         log.push({
           hook: 'client',
@@ -140,12 +139,12 @@ function MqttTransport(this: any, options: Options) {
           m: meta.id,
         })
 
-      const { ok, err, sent } = await handleInternalMsg({
+      const { ok, err, sent, json } = await handleInternalMsg({
         topic: msg.topic,
         json: msg.json,
       })
 
-      reply({ ok, sent, msgstr, err })
+      reply({ ok, err, sent, json })
     }
 
     return ready({
