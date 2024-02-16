@@ -137,12 +137,12 @@ function MqttTransport(this: any, options: Options) {
           m: meta.id,
         })
 
-      const { ok, err, sent, json } = await handleInternalMsg({
+      const { ok, sent, json, err } = await handleInternalMsg({
         topic: msg.topic,
         json: msg.json,
       })
 
-      reply({ ok, err, sent, json })
+      reply({ ok, sent, json, err })
     }
 
     return ready({
@@ -189,9 +189,9 @@ function MqttTransport(this: any, options: Options) {
 
     return {
       ok,
-      err,
       sent,
       json: msg.json,
+      err,
     }
   }
 
