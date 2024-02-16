@@ -113,12 +113,12 @@ function MqttTransport(this: any, options: Options) {
         ) {
           const { topic, msg } = trigger.record.body
           const externalJson = JSON.parse(msg.toString())
-          const action = tu.internalize_msg(seneca, {
+          const body = {
             json: externalJson,
             topic,
-          })
+          }
 
-          return gateway(action, { ...trigger, gateway$: { local: true } })
+          return gateway(body, { ...trigger, gateway$: { local: true } })
         },
       },
     })
@@ -159,7 +159,7 @@ function MqttTransport(this: any, options: Options) {
   ) {
     const externalJson = JSON.parse(msg.toString())
     const interMsg = tu.internalize_msg(seneca, { json: externalJson, topic })
-    seneca.post(act, interMsg)
+    return seneca.post(act, interMsg)
   }
 
   //Handles sending MSG to the broker
