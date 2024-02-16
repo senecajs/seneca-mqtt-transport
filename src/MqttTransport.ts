@@ -52,7 +52,7 @@ function MqttTransport(this: any, options: Options) {
 
   const clientReadyPromise = new Promise<void>((resolve, reject) => {
     client.on('connect', function () {
-      console.log('Connected to the broker')
+      console.log('MQTT Connected to the broker')
 
       if (topics) {
         for (let topic in topics) {
@@ -63,7 +63,7 @@ function MqttTransport(this: any, options: Options) {
 
             client.subscribe(topic, { qos }, (err) => {
               if (err) {
-                console.error('Subscribe error: ', err)
+                console.error('MQTT Subscribe error: ', err)
               }
             })
 
@@ -86,7 +86,7 @@ function MqttTransport(this: any, options: Options) {
     })
 
     client.on('error', (err) => {
-      console.error('Connection error: ', err)
+      console.error('MQTT Connection error: ', err)
       reject(err)
     })
   })
@@ -183,7 +183,7 @@ function MqttTransport(this: any, options: Options) {
         sent = true
       }
     } catch (error) {
-      console.error('Error Sending External MSG: ', error)
+      console.error('MQTT Error Sending External MSG: ', error)
       err = error
     }
 
