@@ -74,11 +74,11 @@ function MqttTransport(this: any, options: Options) {
           }
         }
 
-        client.on('message', (topic, externalMsg) => {
+        client.on('message', (topic, buffer) => {
           const topicConfig = externalTopics[topic]
 
           if (topicConfig && topicConfig.msg) {
-            handleExternalMsg(topic, externalMsg, topicConfig.msg)
+            handleExternalMsg(topic, buffer, topicConfig.msg)
           }
         })
       }
