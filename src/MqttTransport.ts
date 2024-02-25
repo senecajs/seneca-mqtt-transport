@@ -1,4 +1,4 @@
-import { connect, IClientOptions, MqttClient } from 'mqtt'
+import { connect, MqttClient } from 'mqtt'
 
 type QoS = 0 | 1 | 2
 
@@ -11,7 +11,13 @@ type TopicConfig = {
 type Options = {
   debug: boolean
   log: any[]
-  client: IClientOptions
+  connect: {
+    brokerUrl: string
+    opts: {
+      username?: string
+      password?: string
+    }
+  }
   topic: Record<string, TopicConfig>
 }
 
@@ -24,12 +30,12 @@ export type MqttTransportOptions = Partial<Options>
 const defaults: Options = {
   debug: false,
   log: [],
-  client: {
-    protocol: 'mqtt',
-    username: undefined,
-    password: undefined,
-    host: '',
-    port: 1883,
+  connect: {
+    brokerUrl: '',
+    opts: {
+      username: undefined,
+      password: undefined,
+    },
   },
   topic: {},
 }
@@ -44,7 +50,10 @@ function MqttTransport(this: any, options: Options) {
   const log = options.debug && (options.log || [])
   const tu = seneca.export('transport/utils')
 
-  const client: MqttClient = connect(options.client)
+  const client: MqttClient = connect(
+    options.connect.brokerUrl,
+    options.connect.opts,
+  )
 
   const topics = options.topic
   const externalTopics: { [key: string]: TopicConfig } = {}
@@ -157,9 +166,8 @@ function MqttTransport(this: any, options: Options) {
     externalBuffer: Buffer,
     act: string | object,
   ) {
-    const externalJson = JSON.parse(externalBuffer.toString())
     const internalMsg = tu.internalize_msg(seneca, {
-      json: externalJson,
+      buffer: externalBuffer,
       topic,
     })
 
