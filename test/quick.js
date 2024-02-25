@@ -3,7 +3,10 @@ const MqttTransport = require('../dist/MqttTransport')
 const { connect } = require('mqtt')
 
 //Public host - don't send sensitive data
-const testHost = 'test.mosquitto.org'
+const host = 'test.mosquitto.org'
+const port = '1883'
+const protocol = 'mqtt'
+const brokerUrl = `${protocol}://${host}:${port}`
 
 run()
 
@@ -15,8 +18,8 @@ async function run() {
     .use('gateway-lambda')
     .use(MqttTransport, {
       debug: true,
-      client: {
-        host: testHost,
+      connect: {
+        brokerUrl,
       },
       topic: {
         'test/quick/sum': {
@@ -37,7 +40,9 @@ async function run() {
       },
     })
     .message('type:mqtt,role:transport,cmd:sum', async function (msg) {
-      const { json } = msg
+      const { buffer } = msg
+      const json = JSON.parse(buffer.toString())
+
       if (json?.x && json?.y) {
         const { x, y } = json
         const result = { result: x + y }
@@ -48,7 +53,9 @@ async function run() {
       }
     })
     .message('type:mqtt,role:transport,cmd:sub', async function (msg) {
-      const { json } = msg
+      const { buffer } = msg
+      const json = JSON.parse(buffer.toString())
+
       if (json?.x && json?.y) {
         const { x, y } = json
         const result = { result: x - y }
@@ -72,9 +79,9 @@ async function run() {
 
   // Simulating an external mqtt client, which seneca receives and process the data
   const client = connect({
-    host: testHost,
-    protocol: 'mqtt',
-    port: 1883,
+    host,
+    protocol,
+    port,
   })
 
   client.on('connect', function () {
