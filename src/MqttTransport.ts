@@ -121,9 +121,8 @@ function MqttTransport(this: any, options: Options) {
           trigger: { record: any; event: any },
         ) {
           const { topic, msg } = trigger.record.body
-          const externalJson = JSON.parse(msg.toString())
           const body = {
-            json: externalJson,
+            buffer: msg,
             topic,
           }
 
