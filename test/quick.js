@@ -40,8 +40,8 @@ async function run() {
       },
     })
     .message('type:mqtt,role:transport,cmd:sum', async function (msg) {
-      const { buffer } = msg
-      const json = JSON.parse(buffer.toString())
+      const { payload } = msg
+      const json = JSON.parse(payload.toString())
 
       if (json?.x && json?.y) {
         const { x, y } = json
@@ -53,8 +53,8 @@ async function run() {
       }
     })
     .message('type:mqtt,role:transport,cmd:sub', async function (msg) {
-      const { buffer } = msg
-      const json = JSON.parse(buffer.toString())
+      const { payload } = msg
+      const json = JSON.parse(payload.toString())
 
       if (json?.x && json?.y) {
         const { x, y } = json

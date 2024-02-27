@@ -83,11 +83,11 @@ function MqttTransport(this: any, options: Options) {
           }
         }
 
-        client.on('message', (topic, buffer) => {
+        client.on('message', (topic, payload) => {
           const topicConfig = externalTopics[topic]
 
           if (topicConfig && topicConfig.msg) {
-            handleExternalMsg(topic, buffer, topicConfig.msg)
+            handleExternalMsg(topic, payload, topicConfig.msg)
           }
         })
       }
@@ -120,9 +120,9 @@ function MqttTransport(this: any, options: Options) {
           this: typeof seneca,
           trigger: { record: any; event: any },
         ) {
-          const { topic, msg } = trigger.record.body
+          const { topic, payload } = trigger.record.body
           const body = {
-            buffer: msg,
+            payload,
             topic,
           }
 
@@ -162,12 +162,12 @@ function MqttTransport(this: any, options: Options) {
   //Handles MSG received from the broker
   async function handleExternalMsg(
     topic: string,
-    externalBuffer: Buffer,
+    payload: any,
     act: string | object,
   ) {
     const internalMsg = tu.internalize_msg(seneca, {
-      buffer: externalBuffer,
       topic,
+      payload,
     })
 
     return seneca.post(act, internalMsg)
