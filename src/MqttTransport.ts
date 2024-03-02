@@ -179,21 +179,26 @@ function MqttTransport(this: any, options: Options) {
     let err = null
     let sent = null
 
-    const topicConfig = internalTopics[msg.topic]
     const json = msg.json
+    const topicConfig = internalTopics[msg.topic]
+    if (!topicConfig) {
+      err = 'topic-not-declared'
+      return {
+        ok,
+        sent,
+        json,
+        err,
+      }
+    }
 
     try {
-      if (!topicConfig) {
-        err = 'topic-not-declared'
-      } else {
-        const jsonStr = JSON.stringify(json)
-        const qos: QoS = topicConfig.qos || 0
+      const jsonStr = JSON.stringify(json)
+      const qos: QoS = topicConfig.qos || 0
 
-        await client.publishAsync(msg.topic, jsonStr, { qos })
+      await client.publishAsync(msg.topic, jsonStr, { qos })
 
-        ok = true
-        sent = true
-      }
+      ok = true
+      sent = true
     } catch (error) {
       console.error('MqttTransport Error Sending External MSG: ', error)
       err = error
