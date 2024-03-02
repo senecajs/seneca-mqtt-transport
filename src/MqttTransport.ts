@@ -179,8 +179,9 @@ function MqttTransport(this: any, options: Options) {
     let err = null
     let sent = null
 
+    const topic = msg.topic
     const json = msg.json
-    const topicConfig = internalTopics[msg.topic]
+    const topicConfig = internalTopics[topic]
     if (!topicConfig) {
       err = 'topic-not-declared'
       return {
@@ -195,7 +196,7 @@ function MqttTransport(this: any, options: Options) {
       const jsonStr = JSON.stringify(json)
       const qos: QoS = topicConfig.qos || 0
 
-      await client.publishAsync(msg.topic, jsonStr, { qos })
+      await client.publishAsync(topic, jsonStr, { qos })
 
       ok = true
       sent = true
