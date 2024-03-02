@@ -77,10 +77,10 @@ function MqttTransport(this: any, options: Options) {
             })
 
             externalTopics[topic] = topicConfig
-          } else {
-            seneca.message(topicConfig.msg, handleInternalMsg)
-            internalTopics[topic] = topicConfig
+            continue
           }
+          seneca.message(topicConfig.msg, handleInternalMsg)
+          internalTopics[topic] = topicConfig
         }
 
         client.on('message', (topic, payload) => {
