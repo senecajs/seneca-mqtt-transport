@@ -21,10 +21,6 @@ type Options = {
   topic: Record<string, TopicConfig>
 }
 
-type Config = {
-  type: string
-}
-
 export type MqttTransportOptions = Partial<Options>
 
 const defaults: Options = {
@@ -43,11 +39,6 @@ const defaults: Options = {
 function MqttTransport(this: any, options: Options) {
   const seneca: any = this
 
-  const tag = seneca.plugin.tag
-  const gtag = null == tag || '-' === tag ? '' : '$' + tag
-  const gateway = seneca.export('gateway' + gtag + '/handler')
-
-  const log = options.debug && (options.log || [])
   const tu = seneca.export('transport/utils')
 
   const client: MqttClient = connect(
@@ -101,63 +92,6 @@ function MqttTransport(this: any, options: Options) {
   })
 
   seneca.decorate('mqttClientReady', clientReadyPromise)
-
-  seneca.add('role:transport,hook:listen,type:mqtt', hook_listen_mqtt)
-  seneca.add('role:transport,hook:client,type:mqtt', hook_client_mqtt)
-
-  function hook_listen_mqtt(this: any, config: Config, ready: Function) {
-    const seneca = this.root.delegate()
-
-    seneca.act('sys:gateway,kind:lambda,add:hook,hook:handler', {
-      handler: {
-        name: 'mqtt',
-        match: (trigger: { record: any }) => {
-          let matched = config.type === trigger.record.eventSource
-          console.log('MqttTransport TYPE MATCHED', matched, trigger)
-          return matched
-        },
-        process: async function (
-          this: typeof seneca,
-          trigger: { record: any; event: any },
-        ) {
-          const { topic, payload } = trigger.record.body
-          const body = {
-            payload,
-            topic,
-          }
-
-          return gateway(body, { ...trigger, gateway$: { local: true } })
-        },
-      },
-    })
-
-    return ready(config)
-  }
-
-  async function hook_client_mqtt(this: any, config: Config, ready: Function) {
-    async function send_msg(msg: any, reply: any, meta: any) {
-      log &&
-        log.push({
-          hook: 'client',
-          entry: 'send',
-          pat: meta.pattern,
-          w: Date.now(),
-          m: meta.id,
-        })
-
-      const { ok, sent, json, err } = await handleInternalMsg({
-        topic: msg.topic,
-        json: msg.json,
-      })
-
-      reply({ ok, sent, json, err })
-    }
-
-    return ready({
-      config: config,
-      send: send_msg,
-    })
-  }
 
   //Handles MSG received from the broker
   async function handleExternalMsg(
