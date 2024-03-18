@@ -75,22 +75,9 @@ function MqttTransport(this: any, options: Options) {
         }
 
         client.on('message', (topic, payload) => {
-          const publishedTopic = topic
-          let parentTopic = ''
+          const topicConfig = externalTopics[topic]
 
-          for (const externalTopic in externalTopics) {
-            const parsedKey = externalTopic.slice(0, -2)
-            const isParentTopic = publishedTopic.startsWith(parsedKey)
-
-            if (isParentTopic) {
-              parentTopic = externalTopic
-              break
-            }
-          }
-
-          const topicConfig = externalTopics[parentTopic]
-
-          if (topicConfig?.msg) {
+          if (topicConfig && topicConfig.msg) {
             handleExternalMsg(topic, payload, topicConfig.msg)
           }
         })
