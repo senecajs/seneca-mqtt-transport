@@ -65,8 +65,6 @@ async function run() {
         return { error: 'Missing or invalid message data' }
       }
     })
-
-    .listen({ type: 'mqtt' })
     .ready()
 
   try {
