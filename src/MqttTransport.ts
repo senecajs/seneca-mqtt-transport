@@ -77,7 +77,7 @@ function MqttTransport(this: any, options: Options) {
         client.on('message', (topic, payload) => {
           const topicConfig = externalTopics[topic]
 
-          if (topicConfig && topicConfig.msg) {
+          if (topicConfig?.msg) {
             handleExternalMsg(topic, payload, topicConfig.msg)
           }
         })
