@@ -47,7 +47,6 @@ function MqttTransport(this: any, options: Options) {
   )
 
   const topics = options.topic
-
   const externalTopics: { [key: string]: TopicConfig } = {}
   const internalTopics: { [key: string]: TopicConfig } = {}
 
