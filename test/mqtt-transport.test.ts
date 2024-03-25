@@ -14,8 +14,8 @@ describe('mqtt-transport', () => {
       .test()
       .use('promisify')
       .use('entity')
-      // todo: set up jest test for the mqtt connection
-      // .use(MqttTransport)
+    // todo: set up jest test for the mqtt connection
+    // .use(MqttTransport)
     await seneca.ready()
   })
 })
