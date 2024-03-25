@@ -51,7 +51,7 @@ function MqttTransport(this: any, options: Options) {
   const internalTopics: { [key: string]: TopicConfig } = {}
 
   const clientReadyPromise = new Promise<void>((resolve, reject) => {
-    client.on('connect', function () {
+    client.on('connect', function() {
       console.log('MqttTransport Connected to the broker')
 
       if (topics) {
@@ -75,7 +75,20 @@ function MqttTransport(this: any, options: Options) {
         }
 
         client.on('message', (topic, payload) => {
-          const topicConfig = externalTopics[topic]
+          const publishedTopic = topic
+          let parentTopic = ''
+
+          for (const externalTopic in externalTopics) {
+            const parsedKey = externalTopic.slice(0, -2)
+            const isParentTopic = publishedTopic.startsWith(parsedKey)
+
+            if (isParentTopic) {
+              parentTopic = externalTopic
+              break
+            }
+          }
+
+          const topicConfig = externalTopics[parentTopic]
 
           if (topicConfig?.msg) {
             handleExternalMsg(topic, payload, topicConfig.msg)
