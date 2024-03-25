@@ -1,18 +1,24 @@
-import { connect, IClientOptions, MqttClient } from 'mqtt'
+import { connect, MqttClient } from 'mqtt'
 
 type QoS = 0 | 1 | 2
+
+type TopicConfig = {
+  external: boolean
+  msg: string
+  qos?: QoS
+}
 
 type Options = {
   debug: boolean
   log: any[]
-  client: IClientOptions
-  subTopic: string
-  pubTopic: string
-  qos?: QoS
-}
-
-type Config = {
-  type: string
+  connect: {
+    brokerUrl: string
+    opts: {
+      username?: string
+      password?: string
+    }
+  }
+  topic: Record<string, TopicConfig>
 }
 
 export type MqttTransportOptions = Partial<Options>
@@ -20,143 +26,138 @@ export type MqttTransportOptions = Partial<Options>
 const defaults: Options = {
   debug: false,
   log: [],
-  client: {
-    protocol: 'mqtt',
-    username: undefined,
-    password: undefined,
-    host: '',
-    port: 1883,
+  connect: {
+    brokerUrl: '',
+    opts: {
+      username: undefined,
+      password: undefined,
+    },
   },
-  subTopic: '',
-  pubTopic: '',
-  qos: 0,
+  topic: {},
 }
 
 function MqttTransport(this: any, options: Options) {
   const seneca: any = this
 
-  const tag = seneca.plugin.tag
-  const gtag = null == tag || '-' === tag ? '' : '$' + tag
-  const gateway = seneca.export('gateway' + gtag + '/handler')
+  const tu = seneca.export('transport/utils')
 
-  const log = options.debug && (options.log || [])
+  const client: MqttClient = connect(
+    options.connect.brokerUrl,
+    options.connect.opts,
+  )
 
-  const subTopic = options.subTopic
-  const pubTopic = options.pubTopic
-  let qos: QoS = 0
-  if (options.qos) {
-    qos = options.qos
-  }
-
-  const client: MqttClient = connect(options.client)
+  const topics = options.topic
+  const externalTopics: { [key: string]: TopicConfig } = {}
+  const internalTopics: { [key: string]: TopicConfig } = {}
 
   const clientReadyPromise = new Promise<void>((resolve, reject) => {
-    client.on('connect', function () {
-      console.log('Connected to the broker')
-      if (subTopic) {
-        //todo: allow subscription to multiple topics
-        client.subscribe(subTopic, { qos }, (err) => {
-          if (err) {
-            console.error('Subscribe error: ', err)
+    client.on('connect', function() {
+      console.log('MqttTransport Connected to the broker')
+
+      if (topics) {
+        for (let topic in topics) {
+          const topicConfig = topics[topic]
+
+          if (topicConfig.external) {
+            const qos: QoS = topicConfig.qos || 0
+
+            client.subscribe(topic, { qos }, (err) => {
+              if (err) {
+                console.error('MqttTransport Subscribe error: ', err)
+              }
+            })
+
+            externalTopics[topic] = topicConfig
+            continue
           }
-        })
+          seneca.message(topicConfig.msg, handleInternalMsg)
+          internalTopics[topic] = topicConfig
+        }
 
-        client.on('message', (topic, message) => {
-          let handler = seneca.export('gateway-lambda/handler')
+        client.on('message', (topic, payload) => {
+          const publishedTopic = topic
+          let parentTopic = ''
 
-          const msg = JSON.parse(message.toString())
-          // todo: Handle topic?
-          // const subTopic = topic
+          for (const externalTopic in externalTopics) {
+            const parsedKey = externalTopic.slice(0, -2)
+            const isParentTopic = publishedTopic.startsWith(parsedKey)
 
-          return handler({
-            Records: [{ eventSource: 'mqtt', body: { msg } }],
-          })
+            if (isParentTopic) {
+              parentTopic = externalTopic
+              break
+            }
+          }
+
+          const topicConfig = externalTopics[parentTopic]
+
+          if (topicConfig?.msg) {
+            handleExternalMsg(topic, payload, topicConfig.msg)
+          }
         })
       }
       resolve()
     })
 
     client.on('error', (err) => {
-      console.error('Connection error: ', err)
+      console.error('MqttTransport Connection error: ', err)
       reject(err)
     })
   })
 
   seneca.decorate('mqttClientReady', clientReadyPromise)
 
-  seneca.add('role:transport,hook:listen,type:mqtt', hook_listen_mqtt)
-  seneca.add('role:transport,hook:client,type:mqtt', hook_client_mqtt)
-
-  function hook_listen_mqtt(this: any, config: Config, ready: Function) {
-    const seneca = this.root.delegate()
-
-    seneca.act('sys:gateway,kind:lambda,add:hook,hook:handler', {
-      handler: {
-        name: 'mqtt',
-        // todo: What should be matched?
-        match: (trigger: { record: any }) => {
-          let matched = config.type === trigger.record.eventSource
-          console.log('MQTT TYPE MATCHED', matched, trigger)
-          return matched
-        },
-        process: async function (
-          this: typeof seneca,
-          trigger: { record: any; event: any },
-        ) {
-          const { msg } = trigger.record.body
-
-          const action = {
-            type: 'mqtt',
-            role: 'transport',
-            cmd: 'listen',
-            data: msg,
-          }
-
-          return gateway(action, { ...trigger, gateway$: { local: true } })
-        },
-      },
+  //Handles MSG received from the broker
+  async function handleExternalMsg(
+    topic: string,
+    payload: any,
+    act: string | object,
+  ) {
+    const internalMsg = tu.internalize_msg(seneca, {
+      topic,
+      payload,
     })
 
-    return ready(config)
+    return seneca.post(act, internalMsg)
   }
 
-  async function hook_client_mqtt(this: any, config: Config, ready: Function) {
-    async function send_msg(msg: any, reply: any, meta: any) {
-      const msgstr = JSON.stringify(msg.data)
-      log &&
-        log.push({
-          hook: 'client',
-          entry: 'send',
-          pat: meta.pattern,
-          w: Date.now(),
-          m: meta.id,
-        })
+  //Handles sending MSG to the broker
+  async function handleInternalMsg(msg: any) {
+    let ok = false
+    let err = null
+    let sent = null
 
-      let ok = false
-      let sent = null
-      let err = null
-
-      if (pubTopic && msgstr) {
-        client.publish(pubTopic, msgstr, { qos }, (error: any) => {
-          if (error) {
-            err = error
-            console.error('MQTT SENT ERROR', error)
-          }
-
-          ok = true
-          sent = true
-        })
-      } else {
-        err = 'missing-pubTopic-or-msgstr'
+    const topic = msg.topic
+    const json = msg.json
+    const topicConfig = internalTopics[topic]
+    if (!topicConfig) {
+      err = 'topic-not-declared'
+      return {
+        ok,
+        sent,
+        json,
+        err,
       }
-
-      reply({ ok, sent, msgstr, err })
     }
 
-    return ready({
-      config: config,
-      send: send_msg,
-    })
+    try {
+      const jsonStr = JSON.stringify(json)
+      const qos: QoS = topicConfig.qos || 0
+
+      await client.publishAsync(topic, jsonStr, { qos })
+
+      ok = true
+      sent = true
+    } catch (error) {
+      console.error('MqttTransport Error Sending External MSG: ', error)
+      err = error
+    }
+
+    return {
+      ok,
+      sent,
+      json,
+      err,
+    }
   }
 
   return {
