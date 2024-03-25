@@ -18,9 +18,7 @@ async function run() {
     .use('gateway-lambda')
     .use(MqttTransport, {
       debug: true,
-      connect: {
-        brokerUrl,
-      },
+      connect: {},
       topic: {
         'test/quick/sum/#': {
           qos: 0,
