@@ -27,7 +27,7 @@ const defaults: Options = {
   debug: false,
   log: [],
   connect: {
-    brokerUrl: '',
+    brokerUrl: 'mqtt://test.mosquitto.org:1883',
     opts: {
       username: undefined,
       password: undefined,
@@ -51,7 +51,7 @@ function MqttTransport(this: any, options: Options) {
   const internalTopics: { [key: string]: TopicConfig } = {}
 
   const clientReadyPromise = new Promise<void>((resolve, reject) => {
-    client.on('connect', function() {
+    client.on('connect', function () {
       console.log('MqttTransport Connected to the broker')
 
       if (topics) {
