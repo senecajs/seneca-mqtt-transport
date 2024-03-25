@@ -9,7 +9,7 @@
     "resolveJsonModule": true,
     "rootDir": "src",
     "strict": true,
-    "target": "ES2019"
+    "target": "ES2019",
   },
-  "exclude": ["test", "dist", "node_modules"]
+  "exclude": ["test", "dist", "node_modules"],
 }
