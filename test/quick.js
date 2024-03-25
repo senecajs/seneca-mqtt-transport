@@ -22,12 +22,12 @@ async function run() {
         brokerUrl,
       },
       topic: {
-        'test/quick/sum': {
+        'test/quick/sum/#': {
           qos: 0,
           external: true,
           msg: 'type:mqtt,role:transport,cmd:sum',
         },
-        'test/quick/sub': {
+        'test/quick/sub/#': {
           qos: 0,
           external: true,
           msg: 'type:mqtt,role:transport,cmd:sub',
