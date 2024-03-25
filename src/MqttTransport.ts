@@ -47,6 +47,7 @@ function MqttTransport(this: any, options: Options) {
   )
 
   const topics = options.topic
+
   const externalTopics: { [key: string]: TopicConfig } = {}
   const internalTopics: { [key: string]: TopicConfig } = {}
 
@@ -54,47 +55,51 @@ function MqttTransport(this: any, options: Options) {
     client.on('connect', function () {
       console.log('MqttTransport Connected to the broker')
 
-      if (topics) {
-        for (let topic in topics) {
-          const topicConfig = topics[topic]
-
-          if (topicConfig.external) {
-            const qos: QoS = topicConfig.qos || 0
-
-            client.subscribe(topic, { qos }, (err) => {
-              if (err) {
-                console.error('MqttTransport Subscribe error: ', err)
-              }
-            })
-
-            externalTopics[topic] = topicConfig
-            continue
-          }
-          seneca.message(topicConfig.msg, handleInternalMsg)
-          internalTopics[topic] = topicConfig
-        }
-
-        client.on('message', (topic, payload) => {
-          const publishedTopic = topic
-          let parentTopic = ''
-
-          for (const externalTopic in externalTopics) {
-            const parsedKey = externalTopic.slice(0, -2)
-            const isParentTopic = publishedTopic.startsWith(parsedKey)
-
-            if (isParentTopic) {
-              parentTopic = externalTopic
-              break
-            }
-          }
-
-          const topicConfig = externalTopics[parentTopic]
-
-          if (topicConfig?.msg) {
-            handleExternalMsg(topic, payload, topicConfig.msg)
-          }
+      if (Object.keys(topics).length < 1) {
+        client.end(false, function () {
+          console.log('MqttTransport Connection ended - no topics declared')
         })
       }
+
+      for (let topic in topics) {
+        const topicConfig = topics[topic]
+
+        if (topicConfig.external) {
+          const qos: QoS = topicConfig.qos || 0
+
+          client.subscribe(topic, { qos }, (err) => {
+            if (err) {
+              console.error('MqttTransport Subscribe error: ', err)
+            }
+          })
+
+          externalTopics[topic] = topicConfig
+          continue
+        }
+        seneca.message(topicConfig.msg, handleInternalMsg)
+        internalTopics[topic] = topicConfig
+      }
+
+      client.on('message', (topic, payload) => {
+        const publishedTopic = topic
+        let parentTopic = ''
+
+        for (const externalTopic in externalTopics) {
+          const parsedKey = externalTopic.slice(0, -2)
+          const isParentTopic = publishedTopic.startsWith(parsedKey)
+
+          if (isParentTopic) {
+            parentTopic = externalTopic
+            break
+          }
+        }
+
+        const topicConfig = externalTopics[parentTopic]
+
+        if (topicConfig?.msg) {
+          handleExternalMsg(topic, payload, topicConfig.msg)
+        }
+      })
       resolve()
     })
 
