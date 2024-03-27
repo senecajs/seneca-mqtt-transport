@@ -1,12 +1,11 @@
 const Seneca = require('seneca')
 const MqttTransport = require('../dist/MqttTransport')
-const { connect } = require('mqtt')
+// const { connect } = require('mqtt')
 
 //Public host - don't send sensitive data
-const host = 'test.mosquitto.org'
-const port = '1883'
-const protocol = 'mqtt'
-const brokerUrl = `${protocol}://${host}:${port}`
+// const host = 'test.mosquitto.org'
+// const port = '1883'
+// const protocol = 'mqtt'
 
 run()
 
@@ -65,56 +64,50 @@ async function run() {
     })
     .ready()
 
-  try {
-    await seneca.mqttClientReady
-  } catch (err) {
-    console.error('MQTT client connection error: ', err)
-  }
-
   await seneca.ready()
 
-  // Simulating an external mqtt client, which seneca receives and process the data
-  const client = connect({
-    host,
-    protocol,
-    port,
-  })
+  // // Simulating an external mqtt client, which seneca receives and process the data
+  // const client = connect({
+  //   host,
+  //   protocol,
+  //   port,
+  // })
+  //
+  // client.on('connect', function () {
+  //   console.log('External Connected to the broker')
+  //   const ext1 = {
+  //     msgStr: JSON.stringify({ x: 5, y: 2 }),
+  //     topic: 'test/quick/sum',
+  //   }
+  //
+  //   const ext2 = {
+  //     msgStr: JSON.stringify({ x: 20, y: 6 }),
+  //     topic: 'test/quick/sub',
+  //   }
+  //
+  //   const messages = [ext1, ext2]
+  //
+  //   messages.forEach((msgObj) => {
+  //     client.publish(msgObj.topic, msgObj.msgStr, (err) => {
+  //       if (err) {
+  //         console.error(err)
+  //       }
+  //       console.log('External Client Published message: ', msgObj.msgStr)
+  //     })
+  //   })
+  // })
+  //
+  // client.on('error', function (err) {
+  //   console.error('Connection error: ', err)
+  // })
 
-  client.on('connect', function () {
-    console.log('External Connected to the broker')
-    const ext1 = {
-      msgStr: JSON.stringify({ x: 5, y: 2 }),
-      topic: 'test/quick/sum',
-    }
-
-    const ext2 = {
-      msgStr: JSON.stringify({ x: 20, y: 6 }),
-      topic: 'test/quick/sub',
-    }
-
-    const messages = [ext1, ext2]
-
-    messages.forEach((msgObj) => {
-      client.publish(msgObj.topic, msgObj.msgStr, (err) => {
-        if (err) {
-          console.error(err)
-        }
-        console.log('External Client Published message: ', msgObj.msgStr)
-      })
-    })
-  })
-
-  client.on('error', function (err) {
-    console.error('Connection error: ', err)
-  })
-
-  // Simulating an internal seneca msg that should send data to the broker
-  let o1 = await seneca.post('type:mqtt,role:transport,cmd:log', {
-    topic: 'test/quick/log',
-    json: {
-      x: 1,
-      y: 6,
-    },
-  })
-  console.log('OUT', o1)
+  // // Simulating an internal seneca msg that should send data to the broker
+  // let o1 = await seneca.post('type:mqtt,role:transport,cmd:log', {
+  //   topic: 'test/quick/log',
+  //   json: {
+  //     x: 1,
+  //     y: 6,
+  //   },
+  // })
+  // console.log('OUT', o1)
 }
