@@ -1,0 +1,15 @@
+name: seneca-mqtt-transport
+
+services:
+  mosquitto:
+    image: eclipse-mosquitto:2.1-alpine
+    container_name: seneca-mqtt-transport-mosquitto
+    ports:
+      - '11884:1883'
+    volumes:
+      - ./test/mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    healthcheck:
+      test: ['CMD', 'mosquitto_sub', '-p', '1883', '-t', '$$SYS/broker/uptime', '-C', '1', '-W', '3']
+      interval: 5s
+      timeout: 5s
+      retries: 20
