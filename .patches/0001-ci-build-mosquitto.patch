@@ -35,7 +35,7 @@ index 0cacbf2..d85ecd4 100644
 +        ports:
 +          - 11884:1883
 +        options: >-
-+          --health-cmd "mosquitto_sub -p 1883 -t $SYS/broker/uptime -C 1 -W 3"
++          --health-cmd "mosquitto_sub -p 1883 -t '$SYS/broker/uptime' -C 1 -W 3"
 +          --health-interval 5s
 +          --health-timeout 5s
 +          --health-retries 20
