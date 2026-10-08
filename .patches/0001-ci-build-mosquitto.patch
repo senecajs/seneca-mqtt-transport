@@ -1,0 +1,66 @@
+From 591a2c8003bfcd3c9612e8353d995f6deaaf0e3c Mon Sep 17 00:00:00 2001
+From: Claude <noreply@anthropic.com>
+Date: Thu, 8 Oct 2026 12:10:01 +0000
+Subject: [PATCH] Run CI on Node 24 and 22 with a Mosquitto service container
+
+Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>
+Claude-Session: https://claude.ai/code/session_01LaHppcejXbSsAH4BZXNsjV
+---
+ .github/workflows/build.yml | 33 ++++++++++++++++++++++++++++-----
+ 1 file changed, 28 insertions(+), 5 deletions(-)
+
+diff --git a/.github/workflows/build.yml b/.github/workflows/build.yml
+index 0cacbf2..d85ecd4 100644
+--- a/.github/workflows/build.yml
++++ b/.github/workflows/build.yml
+@@ -2,19 +2,42 @@ name: build
+ 
+ on:
+   push:
+-    branches: [main]
++    branches: [master, main]
+   pull_request:
+-    branches: [main]
++    branches: [master, main]
+ 
+ jobs:
+   build:
+     runs-on: ubuntu-latest
++    strategy:
++      matrix:
++        node-version: [24.x, 22.x]
++    services:
++      mosquitto:
++        image: eclipse-mosquitto:2.1-alpine
++        ports:
++          - 11884:1883
++        options: >-
++          --health-cmd "mosquitto_sub -p 1883 -t $SYS/broker/uptime -C 1 -W 3"
++          --health-interval 5s
++          --health-timeout 5s
++          --health-retries 20
++    env:
++      SENECA_TEST_MQTT_HOST: 127.0.0.1
++      SENECA_TEST_MQTT_PORT: 11884
+     steps:
+       - uses: actions/checkout@v4
+-      - name: Use Node.js 24
+-        uses: actions/setup-node@v4
++      # Service containers cannot mount files or override the command, and
++      # Mosquitto 2 only listens on the container loopback without a config.
++      # Install the test config (anonymous listener on 1883) and restart.
++      - name: Configure Mosquitto
++        run: |
++          docker cp test/mosquitto/mosquitto.conf ${{ job.services.mosquitto.id }}:/mosquitto/config/mosquitto.conf
++          docker restart ${{ job.services.mosquitto.id }}
++          for i in $(seq 1 30); do nc -z 127.0.0.1 11884 && break; sleep 1; done
++      - uses: actions/setup-node@v4
+         with:
+-          node-version: '24'
++          node-version: ${{ matrix.node-version }}
+       - run: npm install
+       - run: npm run build --if-present
+       - run: npm test
+-- 
+2.43.0
+
