@@ -158,6 +158,18 @@ function MqttTransport(this: any, options: Options) {
     }
   }
 
+  // Release the broker connection when Seneca closes.
+  // Seneca 3 closes via role:seneca,cmd:close; Seneca 4 via sys:seneca,cmd:close.
+  const close_pattern = String(seneca.version).startsWith('3.')
+    ? 'role:seneca,cmd:close'
+    : 'sys:seneca,cmd:close'
+  seneca.add(close_pattern, function (this: any, msg: any, reply: any) {
+    const self = this
+    client.end(false, {}, function () {
+      self.prior(msg, reply)
+    })
+  })
+
   return {
     exports: {},
   }
