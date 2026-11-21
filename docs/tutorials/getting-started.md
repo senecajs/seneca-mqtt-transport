@@ -6,7 +6,7 @@ published by a device, and publish a Seneca message to the broker.
 ## 1. Install
 
 ```sh
-npm install seneca @seneca/mqtt-transport mqtt
+npm install seneca@^4 @seneca/mqtt-transport mqtt
 ```
 
 For this tutorial a local broker is enough. From a clone of this repository:
@@ -55,7 +55,7 @@ const out = await seneca.post('app:alert,cmd:send', {
 node docs/examples/getting-started.js
 ```
 
-Output with `seneca@4.0.0-rc5`:
+Output with `seneca@4.0.0`:
 
 ```
 MqttTransport Connected to the broker

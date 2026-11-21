@@ -1,4 +1,6 @@
 import { connect, MqttClient } from 'mqtt'
+import type { IClientOptions } from 'mqtt'
+import type Seneca from 'seneca'
 
 type QoS = 0 | 1 | 2
 
@@ -13,33 +15,43 @@ type Options = {
   log: any[]
   connect: {
     brokerUrl: string
-    opts: {
-      username?: string
-      password?: string
-    }
+    // Passed to mqtt.connect(), for example username, password, clientId,
+    // keepalive, reconnectPeriod and TLS settings.
+    opts: IClientOptions
   }
   topic: Record<string, TopicConfig>
 }
 
 export type MqttTransportOptions = Partial<Options>
 
-const defaults: Options = {
+// Default options, built with the validator that Seneca passes in.
+// connect.opts is open, so every mqtt.connect() option is accepted.
+const defaults = ({ valid }: { valid: Seneca.Instance['valid'] }) => ({
   debug: false,
   log: [],
   connect: {
     brokerUrl: 'mqtt://test.mosquitto.org:1883',
-    opts: {
+    opts: valid.Open({
       username: undefined,
       password: undefined,
-    },
+    }),
   },
   topic: {},
-}
+})
 
-function MqttTransport(this: any, options: Options) {
+function MqttTransport(this: Seneca.Instance, options: Options) {
   const seneca: any = this
 
+  // Seneca 4 core provides internalize_msg; @seneca/transport 9 keeps it
+  // when it replaces the export. seneca-transport 8 and older do not.
   const tu = seneca.export('transport/utils')
+  if (null == tu || 'function' !== typeof tu.internalize_msg) {
+    throw new Error(
+      'mqtt-transport: the transport/utils export has no internalize_msg; ' +
+        'use Seneca 4, and @seneca/transport 9 or later instead of ' +
+        'seneca-transport',
+    )
+  }
 
   const client: MqttClient = connect(
     options.connect.brokerUrl,
@@ -159,11 +171,7 @@ function MqttTransport(this: any, options: Options) {
   }
 
   // Release the broker connection when Seneca closes.
-  // Seneca 3 closes via role:seneca,cmd:close; Seneca 4 via sys:seneca,cmd:close.
-  const close_pattern = String(seneca.version).startsWith('3.')
-    ? 'role:seneca,cmd:close'
-    : 'sys:seneca,cmd:close'
-  seneca.add(close_pattern, function (this: any, msg: any, reply: any) {
+  seneca.add('sys:seneca,cmd:close', function (this: any, msg: any, reply: any) {
     const self = this
     client.end(false, {}, function () {
       self.prior(msg, reply)

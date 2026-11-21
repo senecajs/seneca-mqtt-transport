@@ -28,7 +28,7 @@ The documentation follows the [Diátaxis](https://diataxis.fr) layout.
 
 | Page | Topic |
 | ---- | ----- |
-| [How the transport works](explanation/how-it-works.md) | Connection lifecycle, topic matching, Seneca 3 and 4 differences, limits. |
+| [How the transport works](explanation/how-it-works.md) | Connection lifecycle, topic matching, Seneca 4, limits. |
 
 ## Feature index
 

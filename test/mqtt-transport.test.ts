@@ -1,4 +1,4 @@
-/* Copyright © 2022-2024 Seneca Project Contributors, MIT License. */
+/* Copyright © 2022-2026 Seneca Project Contributors, MIT License. */
 
 import Seneca from 'seneca'
 import { connect, MqttClient } from 'mqtt'
@@ -35,26 +35,80 @@ function close(seneca: any): Promise<void> {
   return new Promise((resolve) => seneca.close(resolve))
 }
 
+// Run the broker test on the core transport/utils export, and with
+// @seneca/transport loaded first, which replaces that export.
+const setups: [string, (seneca: any) => any][] = [
+  ['core transport/utils', (seneca: any) => seneca],
+  [
+    '@seneca/transport loaded first',
+    (seneca: any) => seneca.use('@seneca/transport'),
+  ],
+]
+
 describe('mqtt-transport', () => {
   test('happy', async () => {
     expect(MqttTransportDoc).toBeDefined()
+
+    // connect.opts is passed to mqtt.connect() as is, so options that the
+    // defaults do not name, such as clientId and keepalive, are accepted.
+    // No topics: the plugin ends the connection once it is made. No retry,
+    // so the test also passes without a broker.
+    const opts = { clientId: 'happy-' + Date.now(), keepalive: 30, reconnectPeriod: 0 }
     const seneca = Seneca({ legacy: false })
       .test()
-      .use('promisify')
-      .use('entity')
+      .use(MqttTransport, {
+        connect: { brokerUrl: BROKER_URL, opts },
+      })
     await ready(seneca)
+
+    const plugin = seneca.find_plugin('MqttTransport')
+    expect(plugin.options.connect).toEqual({ brokerUrl: BROKER_URL, opts })
+    expect(plugin.options.topic).toEqual({})
+
     await close(seneca)
   })
 
-  test('broker-roundtrip', async () => {
+  test('rejects unknown options', async () => {
+    const errs: any[] = []
+    const seneca = Seneca({ legacy: false, debug: { undead: true } }).test(
+      (err: any) => errs.push(err),
+      'silent',
+    )
+    seneca.use(MqttTransport, { connect: { brokerUrl: BROKER_URL }, bad: 1 })
+    await ready(seneca)
+    expect(errs[0]?.code).toEqual('invalid_plugin_option')
+    await close(seneca)
+  })
+
+  test('needs the core transport/utils helpers', async () => {
+    const errs: any[] = []
+    const seneca = Seneca({ legacy: false, debug: { undead: true } }).test(
+      (err: any) => errs.push(err),
+      'silent',
+    )
+
+    // Stands in for seneca-transport 8, whose transport/utils export lacks
+    // internalize_msg.
+    seneca.use(function transport() {
+      return { exportmap: { utils: {} } }
+    })
+    seneca.use(MqttTransport, {
+      connect: { brokerUrl: BROKER_URL, opts: { reconnectPeriod: 0 } },
+    })
+    await ready(seneca)
+
+    expect(errs[0]?.code).toEqual('plugin_define_failed')
+    expect(errs[0]?.message).toMatch(/@seneca\/transport 9/)
+    await close(seneca)
+  })
+
+  test.each(setups)('broker-roundtrip (%s)', async (_label, first) => {
     const id = Date.now() + '-' + Math.random().toString(36).slice(2)
     const seen: any[] = []
 
-    const seneca = Seneca({ legacy: false })
-      .test()
-      .use('promisify')
+    const seneca = first(Seneca({ legacy: false }).test())
       .use(MqttTransport, {
-        connect: { brokerUrl: BROKER_URL, opts: {} },
+        connect: { brokerUrl: BROKER_URL, opts: { clientId: 'rt-' + id } },
         topic: {
           [`test/${id}/sum/#`]: {
             qos: 1,

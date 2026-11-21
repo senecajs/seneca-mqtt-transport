@@ -2,7 +2,7 @@
 
 Goal: run the test suite against a real Mosquitto broker.
 
-1. Use Node 24 (Node 22 is also supported) and install dependencies:
+1. Use Node 24 or later and install dependencies:
 
    ```sh
    npm install
@@ -37,16 +37,7 @@ Goal: run the test suite against a real Mosquitto broker.
    SENECA_TEST_MQTT_HOST=10.0.0.5 SENECA_TEST_MQTT_PORT=1883 npm test
    ```
 
-5. To test the unreleased Seneca 4.0.0 build, install it without saving,
-   test, and restore:
-
-   ```sh
-   npm install --no-save /path/to/seneca-4.0.0.tgz
-   npm test
-   npm install
-   ```
-
-6. Stop the broker and remove its volumes:
+5. Stop the broker and remove its volumes:
 
    ```sh
    npm run services:down

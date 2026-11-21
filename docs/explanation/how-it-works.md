@@ -10,9 +10,7 @@
    topic, and defines the message of every outbound topic. Outbound messages
    therefore exist only after the first connection.
 3. On `seneca.close()` the plugin ends the MQTT client and then continues the
-   close chain. Seneca 4 closes through `sys:seneca,cmd:close` and Seneca 3
-   through `role:seneca,cmd:close`; the plugin registers on the pattern for
-   the running version.
+   close chain (`sys:seneca,cmd:close`).
 
 ## Topic matching
 
@@ -30,13 +28,19 @@ publish and subscribe, without request and reply, so the plugin maps topics
 to ordinary Seneca messages instead. Inbound messages are fire and forget:
 replies are not published back.
 
-## Seneca 3 and Seneca 4
+## Seneca 4
 
-| Topic | Seneca 3 | Seneca 4 |
-| ----- | -------- | -------- |
-| `seneca.message` / `seneca.post` | needs `seneca-promisify` | built in |
-| `transport/utils` export | core | core |
-| Close pattern | `role:seneca,cmd:close` | `sys:seneca,cmd:close` |
+Version 2 runs on Seneca 4 only. Seneca 3 users stay on version 1.2.
+
+* `seneca.message` and `seneca.post` are built into Seneca 4; the plugin
+  does not need `seneca-promisify`.
+* Inbound messages are converted with `internalize_msg` from the
+  `transport/utils` export of Seneca 4. `@seneca/transport` 9 keeps that
+  helper when it replaces the export. `seneca-transport` 8 does not, so the
+  plugin stops at load with an error if it is loaded first.
+* Seneca 4 checks plugin options against the defaults. `connect.opts` and
+  `topic` are open; any other unknown option is rejected with
+  `invalid_plugin_option`.
 
 ## Limits
 

@@ -15,7 +15,6 @@ run()
 async function run() {
   const seneca = Seneca({ legacy: false })
     .test()
-    .use('promisify') // needed on Seneca 3 only, a no-op on Seneca 4
     .use(MqttTransport, {
       connect: { brokerUrl: BROKER_URL, opts: {} },
       topic: {
