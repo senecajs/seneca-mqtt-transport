@@ -7,7 +7,7 @@ Source: `defaults` in [`src/MqttTransport.ts`](../../src/MqttTransport.ts).
 | `debug` | boolean | `false` | Declared but not read by the plugin. |
 | `log` | array | `[]` | Declared but not read by the plugin. |
 | `connect.brokerUrl` | string | `'mqtt://test.mosquitto.org:1883'` | Broker URL passed to `mqtt.connect()`. |
-| `connect.opts` | object | `{ username: undefined, password: undefined }` | Client options passed to `mqtt.connect()`. |
+| `connect.opts` | object, open | `{}` | Client options passed to `mqtt.connect()`. |
 | `topic` | object | `{}` | Map of MQTT topic to topic configuration. |
 
 ## debug
@@ -26,7 +26,12 @@ and `wss` are accepted by mqtt.js.
 ## connect.opts
 
 The second argument of mqtt.js `connect()`, for example `username`,
-`password`, `clientId`, `keepalive`, `reconnectPeriod`, TLS settings.
+`password`, `clientId`, `keepalive`, `reconnectPeriod`, TLS settings. The
+object is open: every key is passed through.
+
+Seneca 4 checks plugin options against the defaults. Apart from
+`connect.opts` and `topic`, unknown option keys are rejected with
+`invalid_plugin_option`.
 
 ## topic
 

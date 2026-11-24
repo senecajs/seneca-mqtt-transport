@@ -12,9 +12,6 @@ run()
 async function run() {
   const seneca = await Seneca({ legacy: false, timeout: 1111 })
     .test('print')
-    .use('promisify')
-    .use('gateway')
-    .use('gateway-lambda')
     .use(MqttTransport, {
       debug: true,
       connect: {},

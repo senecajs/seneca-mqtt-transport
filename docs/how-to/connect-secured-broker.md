@@ -7,7 +7,9 @@ Goal: connect to a broker that needs TLS or credentials.
    example `mqtts://broker.example.com:8883` or `wss://broker.example.com/mqtt`.
 
 2. Put credentials and other client options in `connect.opts`. The object is
-   passed unchanged as the second argument of `mqtt.connect()`:
+   passed unchanged as the second argument of `mqtt.connect()`, and it
+   accepts every mqtt.js client option (since 2.0.0; on Seneca 4, 1.x
+   rejects any key other than `username` and `password`):
 
    ```js
    seneca.use('@seneca/mqtt-transport', {

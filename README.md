@@ -4,8 +4,8 @@
 # @seneca/mqtt-transport
 
 Bridge Seneca messages and an MQTT broker: broker topics become Seneca
-messages, and Seneca messages publish to broker topics. Works with Seneca 4
-(including the `4.0.0-rc5` prerelease) and Seneca 3, on Node 24 and 22.
+messages, and Seneca messages publish to broker topics. Needs Seneca 4 and
+Node.js 24 or later.
 
 [![npm version](https://img.shields.io/npm/v/@seneca/mqtt-transport.svg)](https://npmjs.com/package/@seneca/mqtt-transport)
 [![build](https://github.com/senecajs/seneca-mqtt-transport/actions/workflows/build.yml/badge.svg)](https://github.com/senecajs/seneca-mqtt-transport/actions/workflows/build.yml)
@@ -17,7 +17,7 @@ messages, and Seneca messages publish to broker topics. Works with Seneca 4
 ## Install
 
 ```sh
-npm install seneca @seneca/mqtt-transport
+npm install seneca@^4 @seneca/mqtt-transport
 ```
 
 ## Quick Example
@@ -69,7 +69,7 @@ Full index: [docs/README.md](docs/README.md).
 | Option | Default | Reference |
 | ------ | ------- | --------- |
 | `connect.brokerUrl` | `mqtt://test.mosquitto.org:1883` | [Options](docs/reference/options.md#connectbrokerurl) |
-| `connect.opts` | `{}` | [Options](docs/reference/options.md#connectopts) |
+| `connect.opts` | `{}`, open: any `mqtt.connect()` option | [Options](docs/reference/options.md#connectopts) |
 | `topic` | `{}` | [Options](docs/reference/options.md#topic) |
 | `debug`, `log` | unused | [Options](docs/reference/options.md) |
 
@@ -81,7 +81,7 @@ Full index: [docs/README.md](docs/README.md).
 ## Contributing
 
 The [Senecajs org](https://github.com/senecajs/) encourages open
-participation. Tests need Node 24 (or 22) and a Mosquitto broker from Docker:
+participation. Tests need Node 24 or later and a Mosquitto broker from Docker:
 
 ```sh
 npm install
@@ -90,8 +90,7 @@ npm test
 npm run services:down
 ```
 
-The devDependency is the Seneca 4 prerelease (`seneca@^4.0.0-rc5`). See
-[Run the tests locally](docs/how-to/run-tests-locally.md). CI workflow
+See [Run the tests locally](docs/how-to/run-tests-locally.md). CI workflow
 changes are delivered as patches in [.patches](.patches/README.md).
 
 ## Background
@@ -100,7 +99,10 @@ Part of the [Senecajs org](https://github.com/senecajs/).
 
 | Plugin | Seneca | Node |
 | ------ | ------ | ---- |
-| 1.3.x | 3.x, 4.x | 22, 24 (Seneca 4 needs 22+) |
+| 2.x | 4.x | 24+ |
 | 1.2.x | 3.x | 14+ |
+
+Version 1.3.0 was never published; its changes are part of 2.0.0.
+History of changes: [CHANGES.md](CHANGES.md).
 
 License: [MIT](LICENSE).
